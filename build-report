@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -eux
+
+for f in $(find ex-${1:-*} -name '*.typ'); do
+    TYPST_ROOT=$PWD typst compile "$f"
+done
