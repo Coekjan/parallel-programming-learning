@@ -1,0 +1,61 @@
+#!/bin/bash
+
+set -eu
+
+# check envs
+[[ ! -v SLURM_BATCH ]] && { echo 'env SLURM_BATCH is not set'; exit 1; }
+
+SLURM_NUM_NODE=$(cut -d'x' -f1 <<<"$SLURM_BATCH")
+SLURM_PROC_PER_NODE=$(cut -d'x' -f2 <<<"$SLURM_BATCH")
+SLURM_NUM_PROC=$((SLURM_NUM_NODE * SLURM_PROC_PER_NODE))
+
+# check slurm
+if ! which sbatch 2>/dev/null; then
+  echo 'sbatch is not installed'
+  exit 1
+fi
+
+JOB_NAME="coekjan.matmul.${SLURM_BATCH}"
+
+# run slurm
+{ tee /dev/stderr | sbatch; } <<EOT
+#!/bin/bash
+#SBATCH -J $JOB_NAME
+#SBATCH -p cpu-normal
+#SBATCH -N $SLURM_NUM_NODE
+#SBATCH -n $SLURM_NUM_PROC
+#SBATCH --ntasks-per-node=$SLURM_PROC_PER_NODE
+#SBATCH -t 20:00
+#SBATCH -o matmul.${SLURM_BATCH}.out
+#SBATCH -e matmul.${SLURM_BATCH}.err
+
+MACHINEFILE=machinefile.\$SLURM_JOB_ID
+
+srun hostname | sort > \$MACHINEFILE
+NP=\$(cat \$MACHINEFILE | wc -l)
+
+module load intel/18.0.3.222
+mpirun -genv I_MPI_FABRICS shm:dapl \
+  -np \${NP} \
+  -f \$MACHINEFILE $HOME/coekjan/matmul
+EOT
+
+# wait until job is done
+echo 'Waiting for job to finish...'
+while true; do
+  status="$(squeue --user="$USER" --name="$JOB_NAME" | \
+            grep 'coekjan' || true)"
+  if [ -z "$status" ]; then
+    printf '\n'
+    break
+  else
+    time="$(echo "$status" | grep -Eo '[[:digit:]]+:[[:digit:]]+')"
+    printf '\rRunning time: %s' "$time"
+    sleep 0.5
+  fi
+done
+echo 'Job is done!'
+
+# show output
+echo -e '\n----------------------------------------\n'
+cat matmul.${SLURM_BATCH}.out
