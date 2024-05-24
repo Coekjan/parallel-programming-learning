@@ -187,7 +187,7 @@ $ <equation:sine-taylor>
       # Run the program `app` and check the fingerprint
       .PHONY: run
       run:
-          exec 3>&1; stdbuf -o0 ./app | tee >(cat - >&3) | grep -q "$(FINGERPRINT)"
+        exec 3>&1; stdbuf -o0 ./app | tee >(cat - >&3) | grep -q $(FINGERPRINT)
       ```
     ),
     caption: "Makefile 中的指纹检测代码"
