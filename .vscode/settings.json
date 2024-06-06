@@ -2,5 +2,14 @@
     "[c]": {
         "editor.formatOnSave": true,
     },
+    "[cpp]": {
+        "editor.formatOnSave": true,
+    },
+    "[cuda]": {
+        "editor.formatOnSave": true,
+    },
+    "[cuda-cpp]": {
+        "editor.formatOnSave": true,
+    },
     "tinymist.exportPdf": "never",
 }
